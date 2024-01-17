@@ -1,0 +1,3 @@
+[submodule "PytorchSteerablePyramid"]
+	path = PytorchSteerablePyramid
+	url = https://github.com/JonathanAlis/PyTorchSteerablePyramid.git
