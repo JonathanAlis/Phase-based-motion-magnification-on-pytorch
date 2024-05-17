@@ -287,6 +287,61 @@ class SCFpyr(object):
             print()
         print(coeff['lo0'].shape)
 
+    def view_coeff(self, coeff, part = 'real', normalize=True, frame = 0):
+
+        '''
+        Visualization function for building a large image that contains the
+        low-pass, high-pass and all intermediate levels in the steerable pyramid. 
+        For the complex intermediate bands, the real part is visualized.
+        
+        Args:
+            coeff (list): complex pyramid stored as list containing all levels
+            normalize (bool, optional): Defaults to True. Whether to normalize each band
+        
+        Returns:
+            np.ndarray: large image that contains grid of all bands and orientations
+        '''
+        
+        
+        if coeff is None:
+            coeff=self.coefficients
+
+        M, N = coeff['hi0'].shape[1:3]
+        Norients = len(coeff['level_1'])
+        #out = np.zeros((M * 2 - coeff[-1].shape[0]+2, Norients * N +2))
+        lo0 = coeff["lo0"][frame, :, :]
+        out = np.zeros((M * 2 - lo0.shape[0]+2, Norients * N +2))
+        
+        currentx, currenty = 0, 0
+        for i in range(1,coeff['last_level']+1):
+            for j in range(Norients):
+                if part == 'real':
+                    tmp = coeff[f"level_{i}"][j][frame, :, :].numpy().real
+                elif part == 'imag':
+                    tmp = coeff[f"level_{i}"][j][frame, :, :].numpy().imag
+                elif part == 'mag':
+                    tmp = np.abs(coeff[f"level_{i}"][j][frame, :, :])
+                elif part == 'phase':
+                    tmp = np.angle(coeff[f"level_{i}"][j][frame, :, :])
+                else:
+                    raise ValueError("part must be either 'real', 'imag', 'mag' or 'phase'")                
+                m, n = tmp.shape
+                #print(type(tmp), i, j)
+                if normalize:
+                    tmp = 255 * tmp/tmp.max()
+                tmp[m-1,:] = 255
+                tmp[:,n-1] = 255
+                out[currentx:currentx+m,currenty:currenty+n] = tmp#torch.flip(torch.flip(tmp, [0]), [1])
+                
+                currenty += n
+            currentx += m#coeff[f"level_{i}"][0].shape[0]
+            currenty = 0
+
+        m, n = coeff["lo0"].shape[1:3]
+        out[currentx: currentx+m, currenty: currenty+n] = 255 * lo0/np.abs(lo0).max()
+        out[0,:] = 255
+        out[:,0] = 255
+        return out.astype(np.uint8)
     
     ############################################################################
     ########################### RECONSTRUCTION #################################
@@ -389,3 +444,4 @@ class SCFpyr(object):
 
 
         return resdft + orientdft
+
