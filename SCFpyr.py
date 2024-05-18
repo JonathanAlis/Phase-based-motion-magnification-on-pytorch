@@ -279,13 +279,14 @@ class SCFpyr(object):
         print('Num bands: ', coeff['nbands'])  # number of orientation bands
         print('Scale factor: ', coeff['scale_factor'])
         
-        print(coeff['hi0'].shape)
+        print(coeff['hi0'].shape, type(coeff['hi0']))
         for i in range(1,coeff['last_level']+1):
             print(f'Level {i}:')
             for band in range(len(coeff[f'level_{i}'])): 
-                print(coeff[f'level_{i}'][band].shape, end=', ')
+                print(coeff[f'level_{i}'][band].shape, type(coeff[f'level_{i}'][band]), end=', ')
             print()
         print(coeff['lo0'].shape)
+        print(type(coeff['lo0']))
 
     def view_coeff(self, coeff, part = 'real', normalize=True, frame = 0):
 
@@ -316,29 +317,30 @@ class SCFpyr(object):
         for i in range(1,coeff['last_level']+1):
             for j in range(Norients):
                 if part == 'real':
-                    tmp = coeff[f"level_{i}"][j][frame, :, :].numpy().real
+                    tmp = coeff[f"level_{i}"][j][frame, :, :].real
                 elif part == 'imag':
-                    tmp = coeff[f"level_{i}"][j][frame, :, :].numpy().imag
+                    tmp = coeff[f"level_{i}"][j][frame, :, :].imag
                 elif part == 'mag':
-                    tmp = np.abs(coeff[f"level_{i}"][j][frame, :, :])
+                    tmp = torch.abs(coeff[f"level_{i}"][j][frame, :, :])
                 elif part == 'phase':
-                    tmp = np.angle(coeff[f"level_{i}"][j][frame, :, :])
+                    tmp = torch.angle(coeff[f"level_{i}"][j][frame, :, :])
                 else:
                     raise ValueError("part must be either 'real', 'imag', 'mag' or 'phase'")                
                 m, n = tmp.shape
-                #print(type(tmp), i, j)
+                if not isinstance(tmp, torch.Tensor):
+                    break
                 if normalize:
                     tmp = 255 * tmp/tmp.max()
                 tmp[m-1,:] = 255
                 tmp[:,n-1] = 255
-                out[currentx:currentx+m,currenty:currenty+n] = tmp#torch.flip(torch.flip(tmp, [0]), [1])
+                out[currentx:currentx+m,currenty:currenty+n] = torch.flip(torch.flip(tmp, [0]), [1]).numpy()
                 
                 currenty += n
             currentx += m#coeff[f"level_{i}"][0].shape[0]
             currenty = 0
 
         m, n = coeff["lo0"].shape[1:3]
-        out[currentx: currentx+m, currenty: currenty+n] = 255 * lo0/np.abs(lo0).max()
+        out[currentx: currentx+m, currenty: currenty+n] = 255 * torch.flip(torch.flip(lo0, [0]), [1]).numpy()/np.abs(lo0).max()
         out[0,:] = 255
         out[:,0] = 255
         return out.astype(np.uint8)
